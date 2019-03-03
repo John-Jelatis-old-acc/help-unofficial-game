@@ -1,0 +1,55 @@
+@font-face {
+	font-family: 'I Do Not Know';
+	src: url(font.ttf) format('truetype');
+}
+body {
+	background: #09F;
+	height: 100vh;
+	left: 0;
+	top: 0;
+	transition-delay: 1s;
+	transition-duration: 1s;
+	padding: 0;
+	position: fixed;
+	margin: 0;
+	width: 100vw;
+}
+html, body.loading {
+	background: #000;
+}
+#loading {
+	display: block;
+	font-family: 'I Do Not Know';
+	height: 25vh;
+	left: 0;
+	line-height: 0vh;
+	opacity: 0;
+	position: fixed;
+	text-align: center;
+	top: 25vh;
+	transition-duration: 1s;
+	transform: scale(2);
+	width: 100vw;
+}
+#loading h1 {
+	color: #09FF;
+	font-size: 20vmin;
+}
+#loading h2 {
+	color: #09F4;
+	font-size: 5vmin;
+}
+.loading #loading {
+	opacity: 1;
+}
+canvas {
+	height: 100vh;
+	top: 0;
+	transition-delay: 1.5s;
+	transition-duration: 1s;
+	position: fixed;
+	width: 100vw;
+}
+.loading canvas {
+	top: 100vh;
+}
