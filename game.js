@@ -2,7 +2,7 @@
 window.onerror = function() { alert(Array.from(arguments)) };
 // Production?
 const VERSION = {
-	"PRODUCTION": !0,
+	"PRODUCTION": true,
 	"VERSION"	: "1.0"
 };
 // Spritesheet thing
