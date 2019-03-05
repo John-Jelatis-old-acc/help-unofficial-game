@@ -3,7 +3,7 @@ window.onerror = function() { alert(Array.from(arguments)) };
 // Production?
 var VERSION = {
 	"PRODUCTION": true,
-	"VERSION": "1.0"
+	"VERSION"	: "1.0"
 };
 // Useful function
 var loadImg = function(url) { var a = new Image(); a.src = url; return a };
@@ -65,7 +65,7 @@ Entity.prototype.tick = function(ms, entities, blocks) {
 	if(this.vX > 0)
 		this.sX = +1;
 	this.vX = ('d' in this.keys || 'a' in this.keys) ?
-		(this.keys.a || 0) + (this.keys.d || 0) : this.vX;
+		((1 + (this.keys.shift || 0)) * ((this.keys.a || 0) + (this.keys.d || 0))) : this.vX;
 	if(this.oG && this.keys.w)
 		this.vY = this.keys.w;
 	// Check for collisions
@@ -363,9 +363,11 @@ function Game() {
 		self.mD = true;
 		self.mX = e.pageX * 100 / window.innerHeight - 1;
 		self.mY = e.pageY * 100 / window.innerHeight - 1;
+		var mX_a = -self.canvas.width * 50 / self.canvas.height + 
+				self.player.x + self.mX;
 		for(var e = 0; e < self.entities.length; e++) {
-			if(self.entities[e].x - self.entities[e].w / 1 < self.mX &&
-			   self.entities[e].x + self.entities[e].w / 1 > self.mX &&
+			if(self.entities[e].x - self.entities[e].w / 1 < mX_a &&
+			   self.entities[e].x + self.entities[e].w / 1 > mX_a &&
 			   self.entities[e].y < self.mY &&
 			   self.entities[e].y + self.entities[e].h > self.mY) {
 				self.entities[e].drag = true;
@@ -450,32 +452,16 @@ Game.prototype.init = function() {
 			g.running = !g.running;
 		})
 	];
-	this.entities[2].vX = 0.0192;
+	this.entities[2].vX = 0.02;
 	this.levels		= [{
 		'blocks': [
 			new Block({
 				'x': -50,
 				'y': 75,
-				'w': 45,
+				'w': 145,
 				'h': 25,
 				'm': 0,
 				'c': '#0F9'
-			}),
-			new Block({
-				'x': 0,
-				'y': 75,
-				'w': 45,
-				'h': 25,
-				'm': -0.128,
-				'c': '#0F9'
-			}),
-			new Block({
-				'x': 50,
-				'y': 75,
-				'w': 45,
-				'h': 25,
-				'm': -0.192,
-				'c': '#0E8'
 			}),
 			new Block({
 				'x': 100,
@@ -533,7 +519,8 @@ Game.prototype.tick	= function() {
 	}
 	if(this.drag) {
 		if(this.mD) {
-			this.drag.x = this.mX - this.drag.w / 2;
+			this.drag.x = -this.canvas.width * 50 / this.canvas.height + 
+				this.player.x + this.mX - this.drag.w / 2;
 			this.drag.y = this.mY - this.drag.h / 2;
 		} else {
 			this.drag.drag = false;
@@ -647,6 +634,9 @@ window.addEventListener('keydown', function(evt) {
 		case 'w':
 		case 'W':
 			game.player.keys.w	= -0.085;
+			break;
+		case 's':
+			game.player.keys.shift	= !game.player.keys.shift;
 			break;
 	}
 });
