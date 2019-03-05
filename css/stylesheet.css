@@ -4,11 +4,12 @@
 }
 body {
 	background: #09F;
+	cursor: none;
 	height: 100vh;
 	left: 0;
 	top: 0;
 	transition-delay: 1s;
-	transition-duration: 1s;
+	transition: background 1s;
 	padding: 0;
 	position: fixed;
 	margin: 0;
@@ -44,9 +45,10 @@ html, body.loading {
 }
 canvas {
 	height: 100vh;
+	font-family: 'I Do Not Know';
 	top: 0;
+	transition: 1s top;
 	transition-delay: 1.5s;
-	transition-duration: 1s;
 	position: fixed;
 	width: 100vw;
 }
