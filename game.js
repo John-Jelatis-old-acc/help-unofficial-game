@@ -3,7 +3,7 @@ window.onerror = function() { alert(Array.from(arguments)) };
 // Production?
 var VERSION = {
 	"PRODUCTION": true,
-	"VERSION"	: "1.0"
+	"VERSION": "1.0"
 };
 // Useful function
 var loadImg = function(url) { var a = new Image(); a.src = url; return a };
