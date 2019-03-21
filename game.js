@@ -3,7 +3,7 @@ window.onerror = function() { alert(Array.from(arguments)) };
 // Production?
 var VERSION = {
 	"PRODUCTION": true,
-	"VERSION"	: "1.0"
+	"VERSION"	: "1.1"
 };
 // Useful function
 var loadImg = function(url) { var a = new Image(); a.src = url; return a };
@@ -40,6 +40,7 @@ function Entity(texture, x, y, w, h) {
 	this.sY = 1;
 	this.oG = false;
 	this.drag = false;
+	this.lives = 3;
 	this.keys = {}; // for controllable entities, or emulating on others
 };
 Entity.prototype.draw = function(sprite, context, pX) {
@@ -55,21 +56,27 @@ Entity.prototype.tick = function(ms, entities, blocks) {
 	if(this.drag) {
 		this.vX = 0;
 		this.vY = 0;
-	};
+	}
 	// Update
 	this.x += this.vX * ms;
 	this.y += this.vY * ms;
 	this.vY += ms / 7000;
 	if(this.vX < 0)
-		this.sX = -1;
+		this.sX = -Math.abs(this.sX);
 	if(this.vX > 0)
-		this.sX = +1;
+		this.sX = +Math.abs(this.sX);
 	this.vX = ('d' in this.keys || 'a' in this.keys) ?
 		((1 + (this.keys.shift || 0)) * ((this.keys.a || 0) + (this.keys.d || 0))) : this.vX;
 	if(this.oG && this.keys.w)
 		this.vY = this.keys.w;
 	// Check for collisions
 	this.oG = false;
+	if(this.y > 100) {
+		this.lives --;
+		this.vY = -0.05;
+		this.y = 10;
+		this.x = 10;
+	}
 	for(var b = 0; b < blocks.length; b++) {
 		var check_vX = (
 			(this.vX != 0) && 
@@ -94,26 +101,16 @@ Entity.prototype.tick = function(ms, entities, blocks) {
 			this.y = blocks[b].y + (blocks[b].m * (this.x - blocks[b].x)) - this.h;
 		}
 		// But either way
-		if(check_vX || check_vY)
+		if(check_vX || check_vY) {
 			this.oG = true;
+		}
 	}
 };
 
 // Player
 function Player(texture, x, y, w, h) {
-	this.t = texture;
-	this.x = x;
-	this.vX = 0;
-	this.y = y;
-	this.vY = -0.2;
-	this.w = w;
-	this.h = h;
-	this.r = 0;
-	this.sX = 1;
-	this.sY = 1;
-	this.oG = false;
-	this.drag = false;
-	this.keys = {}; // for controllable entities, or emulating on others
+	// super()
+	Entity.prototype.constructor(texture, x, y, w, h);
 };
 Player.prototype = Object.create(Entity.prototype);
 Player.prototype.constructor = Player;
@@ -139,15 +136,19 @@ function Block(d) {
 };
 Block.prototype.check = function(x, y, w, h) {
 	return (
-		x < this.x + this.w &&
-		x > this.x &&
+		x - w / 2 < this.x + this.w &&
+		x + w / 2 > this.x &&
 		y + h > this.y + (this.m * (x - this.x)) &&
 		y < this.y + (this.m * (x - this.x)) + this.h
 	);
 };
 Block.prototype.draw = function(ctx, pX) {
+	var xU = ctx.canvas.width / ctx.canvas.height,
+		offset = (-pX + 50 * xU);
+	if(offset + this.x + this.w < 0 || offset + this.x > 100 * xU)
+		return;
 	ctx.save();
-	ctx.translate(-pX + ctx.canvas.width * 50 / ctx.canvas.height, 0);
+	ctx.translate(offset, 0);
 	ctx.fillStyle = this.c;
 	ctx.beginPath();
 	ctx.moveTo(this.x, this.y);
@@ -402,12 +403,48 @@ function Game() {
 			if(hovering) self.mH = true;
 		}
 	});
+	this.canvas.addEventListener('touchend', function(e) {
+		self.mD = false;
+		self.mX = e.changedTouches[0].pageX * 100 / window.innerHeight - 1;
+		self.mY = e.changedTouches[0].pageY * 100 / window.innerHeight - 1;
+	});
+	this.canvas.addEventListener('touchstart', function(e) {
+		self.mD = true;
+		self.mX = e.changedTouches[0].pageX * 100 / window.innerHeight - 1;
+		self.mY = e.changedTouches[0].pageY * 100 / window.innerHeight - 1;
+		var mX_a = -self.canvas.width * 50 / self.canvas.height + 
+				self.player.x + self.mX;
+		for(var e = 0; e < self.entities.length; e++) {
+			if(self.entities[e].x - self.entities[e].w / 1 < mX_a &&
+			   self.entities[e].x + self.entities[e].w / 1 > mX_a &&
+			   self.entities[e].y < self.mY &&
+			   self.entities[e].y + self.entities[e].h > self.mY) {
+				self.entities[e].drag = true;
+				self.drag = self.entities[e];
+				return;
+			}
+		}
+	});
+	this.canvas.addEventListener('touchmove', function(e) {
+		e.preventDefault();
+		self.mX = e.changedTouches[0].pageX * 100 / window.innerHeight - 1;
+		self.mY = e.changedTouches[0].pageY * 100 / window.innerHeight - 1;
+		self.mH = false;
+		for(var b = 0; b < self.buttons.length; b++) {
+			var hovering = self.buttons[b].check(
+				e.pageX * 100 / window.innerHeight,
+				e.pageY * 100 / window.innerHeight
+			);
+			self.buttons[b].m = hovering ? 'hover' : 'normal';
+			if(hovering) self.mH = true;
+		}
+	});
 };
 Game.prototype.init = function() {
 	this.entities	= [
-		new Entity('paul-mccartney', 45, -64, 20, 38),
-		new Entity('george-harrison', 20, -128, 20, 38),
-		new Entity('john-lennon', -50, -192, 20, 38)
+		new Entity('paul-mccartney', 45, -64, 10, 19),
+		new Entity('george-harrison', 20, -128, 10, 19),
+		new Entity('john-lennon', -50, -192, 10, 19)
 	];
 	this.buttons	= [
 		new Button(4, 4, 12, 12, {
@@ -505,13 +542,15 @@ Game.prototype.init = function() {
 			})
 		]
 	}];
-	this.player		= new Player('ringo-starr', 70, 0, 20, 38);
+	this.player		= new Player('ringo-starr', 70, 0, 10, 19);
 	this.running	= true;
 	this.lastTick	= new Date().getTime();
 	document.body.appendChild(this.canvas);
 };
 Game.prototype.tick	= function() {
 	var time = new Date().getTime();
+	if(!document.hasFocus())
+		this.running = false;
 	if(this.running) {
 		for(var e = 0; e < this.entities.length; e++)
 			this.entities[e].tick(time - this.lastTick, this.entities, this.levels[this.level].blocks);
@@ -563,10 +602,25 @@ Game.prototype.draw	= function() {
 	this.context.fillStyle		= '#0F9';
 	this.context.strokeStyle	= '#041';
 	this.context.font			= '10px \'I Do Not Know\'';
-	var xU = this.canvas.width / this.canvas.height;
-	this.context.strokeText('FPS: ' + this.fpsFPS, xU * 100 - 64, 13);
-	this.context.fillText('FPS: ' + this.fpsFPS, xU * 100 - 64, 13);
+	var xU	= this.canvas.width / this.canvas.height,
+		msg	= [
+			'FPS: ' + this.fpsFPS,
+			'LIVES: ' + this.player.lives,
+			'LEVEL: ' + (this.level + 1)
+		];
+	var _msg = msg[Math.floor(new Date().getTime() / 7500) % msg.length] + ' ';
+	this.context.strokeText(_msg, xU * 100 - this.context.measureText(_msg).width, 12);
+	this.context.fillText(_msg, xU * 100 - this.context.measureText(_msg).width, 12);
+	if(this.player.lives <= 0)
+		this.running = false;
 	if(!this.running) {
+		var paused	= this.player.lives <= 0 ? 'Game Over' : 'Paused',
+			tips	= [
+				'Do not die',
+				'Surviving is key',
+				'If you die, I\'ll kill you',
+				'If you fall to your death, you die'
+			], t = tips[Math.floor(new Date().getTime() / 10000) % tips.length];
 		this.sprites.draw(this.context, 'menu-fill', xU * 20 + 10, 30, xU * 60 - 10, 60);
 		this.sprites.draw(this.context, 'corner-top-left', xU * 20, 20, 10, 10);
 		this.sprites.draw(this.context, 'side-top', xU * 20 + 10, 20, xU * 60 - 10, 10);
@@ -576,7 +630,27 @@ Game.prototype.draw	= function() {
 		this.sprites.draw(this.context, 'side-right', xU * 80, 30, 10, 50);
 		this.sprites.draw(this.context, 'corner-btm-right', xU * 80, 80, 10, 10);
 		this.sprites.draw(this.context, 'side-btm', xU * 20 + 10, 80, xU * 60 - 10, 10);
+		if(this.mX < xU * 80 + 5 && this.mX > xU * 80 - 5 &&
+		   this.mY > 25 && this.mY < 35) {
+			this.context.fillStyle = 'rgba(0, 0, 0, 0.2)';
+			this.context.fillRect(xU * 80 - 5, 25, 10, 10);
+			if(this.mD) {
+				this.running = true;
+			};
+		}
 		this.sprites.draw(this.context, 'menu-cross', xU * 80 - 5, 25, 10, 10);
+		this.context.fillStyle		= '#F90';
+		this.context.strokeStyle	= '#410';
+		this.context.lineWidth		= 1.3;
+		this.context.font			= '10px \'I Do Not Know\'';
+		this.context.strokeText(paused, xU * 50 - (this.context.measureText(paused).width / 2), 47.5);
+		this.context.fillText(paused, xU * 50 - (this.context.measureText(paused).width / 2), 47.5);
+		this.context.fillStyle		= '#960';
+		this.context.strokeStyle	= '#640';
+		this.context.lineWidth		= 0.65;
+		this.context.font			= '3.5px \'I Do Not Know\'';
+		this.context.strokeText(t, xU * 50 - (this.context.measureText(t).width / 2), 57);
+		this.context.fillText(t, xU * 50 - (this.context.measureText(t).width / 2), 57);
 	};
 	this.sprites.draw(
 		this.context,
@@ -622,6 +696,8 @@ window.addEventListener('beforeunload', function(evt) {
 	game.saveData();
 });
 window.addEventListener('keydown', function(evt) {
+	if(!('player' in game || 'keys' in game.player || game.player.keys instanceof Object))
+		return;
 	switch(evt.key) {
 		case 'd':
 		case 'D':
@@ -635,13 +711,15 @@ window.addEventListener('keydown', function(evt) {
 		case 'W':
 			game.player.keys.w	= -0.085;
 			break;
-		case 's':
-			game.player.keys.shift	= !game.player.keys.shift;
+		case 'Shift':
+			game.player.keys.shift	= true;
 			break;
 	}
 });
 window.addEventListener('keyup', function(evt) {
-	switch(evt.key) {
+	if(!('player' in game || 'keys' in game.player || game.player.keys instanceof Object))
+		return;
+	switch(evt.key || evt.code) {
 		case 'd':
 		case 'D':
 			game.player.keys.d	= 0;
@@ -653,6 +731,9 @@ window.addEventListener('keyup', function(evt) {
 		case 'w':
 		case 'W':
 			game.player.keys.w	= 0;
+			break;
+		case 'Shift':
+			game.player.keys.shift	= false;
 			break;
 	}
 });
